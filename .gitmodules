@@ -1,0 +1,6 @@
+[submodule "RIOT"]
+	path = RIOT
+	url = https://github.com/RIOT-OS/RIOT.git
+[submodule "RIOT-wyres"]
+	path = RIOT-wyres
+	url = https://github.com/CampusIoT/RIOT-wyres.git
