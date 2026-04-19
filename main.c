@@ -73,6 +73,27 @@ int lora_channel_cmd(int argc, char **argv) {
   return res;
 }
 
+int rx_msg_cmd(int argc, char **argv) {
+  if (argc != 2 && argc != 5) {
+    printf("Usage: %s <message> <rssi> <snr> <toa>\n", argv[0]);
+    printf("   or: %s <message>\n", argv[0]);
+    return -1;
+  }
+
+  size_t len = strlen(argv[1]);
+  if (len > MAX_MESSAGE_SIZE) {
+    printf("Message too long (max %d characters)\n", MAX_MESSAGE_SIZE);
+    return -1;
+  }
+
+  uint8_t rssi = (argc == 5) ? atoi(argv[2]) : 0;
+  int8_t snr = (argc == 5) ? atoi(argv[3]) : 0;
+  uint32_t toa = (argc == 5) ? atoi(argv[4]) : 0;
+
+  main_listen_message_entry(len, argv[1], rssi, snr, toa);
+  return 0;
+}
+
 static const shell_command_t shell_commands[] = {
     {"lora_setup", "Initialize LoRa modulation settings", lora_setup_cmd},
     {"lora_implicit", "Enable implicit header", lora_implicit_cmd},
@@ -88,6 +109,7 @@ static const shell_command_t shell_commands[] = {
     {"send_broadcast", "Send a broadcast message", chat_send_broadcast_cmd},
     {"send_contact", "Send a message to a contact", chat_send_to_contact_cmd},
     {"send_group", "Send a message to a group", chat_send_to_group_cmd},
+    {"force_rcv", "Simulate the reception of a msg (for testing)", rx_msg_cmd},
     {NULL, NULL, NULL}};
 
 int main(void) {

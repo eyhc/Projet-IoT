@@ -1,5 +1,7 @@
 # Projet-IoT : Lora Disaster Chat
 
+Auteurs: Elie Carrot, Arthur Palma
+
 ## Cloner le projet
 
 ```bash
@@ -35,21 +37,18 @@ make -j 8 flash
 - [X] Envoi de message sur un groupe de discussion (inscription automatique)
 - [X] Affichage du message émis complet (exp, dest, contenu, etc.)
 
-- [ ] Filtrage des messages reçus (affichage uniquement des messages destinés à 
+- [X] Filtrage des messages reçus (affichage uniquement des messages destinés à 
       moi ou à un groupe de discussion auquel je suis inscrit)
+- [ ] Lister les derniers messages reçus (filtrés ou non)
 
-- [ ] Lister les derniers messages reçus.
-- [ ] Ajout automatique d'un expéditeur inconnu à la liste des contacts.
-
-
+- [X] Ajout automatique d'un expéditeur inconnu à la liste des contacts
 - [ ] Eviction LRU des contacts si la liste est pleine.
-
 
 - [ ] Emission télémétrique à une fréquence régulière paramétrable.
 
 **LoraMeshChat**
 
-- [ ] Ignorer les messages déjà reçus (via compteur de message expéditeur)
+- [X] Ignorer les messages déjà reçus (via compteur de message expéditeur)
 - [ ] Réémettre un message (réseau maillé) si présence du ttl dans le message.
 
 
@@ -77,13 +76,16 @@ group ls : Affichage de la liste des groupes de discussion auxquels je suis insc
 group rm <group> : Suppression de mon inscription à un groupe de discussion
 contact ls : Affichage de la liste des contacts
 send_broadcast <message> : Envoi d'un message à tous les utilisateurs
-send_contact alias <contact> <message> : Envoi d'un message via son alias (4 caractères ascii)
+send_contact alias <contact> <message> : Envoi d'un message via son alias 
+                                         (4 caractères ascii)
 send_contact id    <id> <message> : Envoi d'un message à un contact 
                                     (id dans la liste des contacts)
 send_group   alias <group> <message> : Envoi d'un message sur un groupe de discussion
 send_group   id    <id> <message> : Envoi d'un message sur un groupe de discussion 
                                     (id dans la liste des groupes de discussion)
 force_rcv <message> : Simule la réception d'un message (pour les tests)
+force_rcv <message> <rssi> <snr> <toa> : Idem que précedent mais avec des 
+                                        paramètres de réception personnalisés
 ```
 
 

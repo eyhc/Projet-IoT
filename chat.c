@@ -100,6 +100,9 @@ void chat_init(uint32_t period_s) {
   lora_crc(3, (char *[]){"lora_crc", "set", crc_str});
   lora_implicit(3, (char *[]){"lora_implicit", "set", implicit_header_str});
   lora_syncword(3, (char *[]){"lora_syncword", "set", syncword_str});
+
+  lora_set_message_callback((lora_message_callback_t)main_listen_message_entry);
+  lora_listen(0, NULL);
 }
 
 /* ====================== INFO / CONTACTS / GROUPES ====================== */
@@ -294,6 +297,12 @@ int chat_contact(int argc, char *argv[argc]) {
 
 /* ====================== ENVOIE DE MESSAGES ====================== */
 
+int chat_send_message(struct message *msg) {
+  static char buffer[MAX_MESSAGE_SIZE + 20];
+  sprint_message(sizeof(buffer), buffer, msg);
+  return lora_send(2, (char *[]){"lora_send", buffer});
+}
+
 int chat_send_broadcast_cmd(int argc, char *argv[argc]) {
   if (argc != 2) {
     printf("Usage: %s <message>\n", argv[0]);
@@ -314,9 +323,10 @@ int chat_send_broadcast_cmd(int argc, char *argv[argc]) {
 
   msg.dest_type = DEST_BROADCAST;
   msg.dest[0] = '\0';
-  msg.content = (char *)argv[1];
+  strncpy(msg.content, argv[1], MAX_MESSAGE_SIZE);
+  msg.content[MAX_MESSAGE_SIZE] = '\0';
 
-  return send_message(&msg);
+  return chat_send_message(&msg);
 }
 
 int chat_send_to_contact_cmd(int argc, char *argv[argc]) {
@@ -336,15 +346,14 @@ int chat_send_to_contact_cmd(int argc, char *argv[argc]) {
   mutex_unlock(shared_data.mutex);
 
   struct message msg;
-  if (strcmp(argv[1], "alias") == 0) {
-    mutex_lock(shared_data.mutex);
-    name_cpy(msg.sender, shared_data.chat_data->local_user.name);
-    msg.counter = ++shared_data.chat_data->local_user.last_seen_counter;
-    mutex_unlock(shared_data.mutex);
+  mutex_lock(shared_data.mutex);
+  name_cpy(msg.sender, shared_data.chat_data->local_user.name);
+  msg.counter = ++shared_data.chat_data->local_user.last_seen_counter;
+  mutex_unlock(shared_data.mutex);
 
+  if (strcmp(argv[1], "alias") == 0) {
     msg.dest_type = DEST_CONTACT;
     name_cpy(msg.dest, argv[2]);
-    msg.content = (char *)argv[3];
   } else {
     mutex_lock(shared_data.mutex);
     if (atoi(argv[2]) < 0 || atoi(argv[2]) >= MAX_CONTACTS ||
@@ -353,18 +362,16 @@ int chat_send_to_contact_cmd(int argc, char *argv[argc]) {
       mutex_unlock(shared_data.mutex);
       return 3;
     }
-
     name_cpy(msg.dest,
              shared_data.chat_data->chat_contacts[atoi(argv[2])].name);
-    name_cpy(msg.sender, shared_data.chat_data->local_user.name);
-    msg.counter = ++shared_data.chat_data->local_user.last_seen_counter;
     mutex_unlock(shared_data.mutex);
 
     msg.dest_type = DEST_CONTACT;
-    msg.content = (char *)argv[3];
   }
 
-  return send_message(&msg);
+  strncpy(msg.content, argv[3], MAX_MESSAGE_SIZE);
+  msg.content[MAX_MESSAGE_SIZE] = '\0';
+  return chat_send_message(&msg);
 }
 
 int chat_send_to_group_cmd(int argc, char *argv[argc]) {
@@ -383,10 +390,14 @@ int chat_send_to_group_cmd(int argc, char *argv[argc]) {
   mutex_unlock(shared_data.mutex);
 
   struct message msg;
+  mutex_lock(shared_data.mutex);
+  name_cpy(msg.sender, shared_data.chat_data->local_user.name);
+  msg.counter = ++shared_data.chat_data->local_user.last_seen_counter;
+  mutex_unlock(shared_data.mutex);
+
   if (strcmp(argv[1], "alias") == 0) {
     name_cpy(msg.dest, argv[2]);
     msg.dest_type = DEST_GROUP;
-    msg.content = (char *)argv[3];
 
     mutex_lock(shared_data.mutex);
     int idx = get_group_index(shared_data.chat_data->chat_groups, msg.dest);
@@ -396,11 +407,6 @@ int chat_send_to_group_cmd(int argc, char *argv[argc]) {
       printf("Error: failed to join group\n");
       return 3;
     }
-
-    mutex_lock(shared_data.mutex);
-    name_cpy(msg.sender, shared_data.chat_data->local_user.name);
-    msg.counter = ++shared_data.chat_data->local_user.last_seen_counter;
-    mutex_unlock(shared_data.mutex);
   } else {
     mutex_lock(shared_data.mutex);
     if (atoi(argv[2]) < 0 || atoi(argv[2]) >= MAX_GROUPS ||
@@ -411,13 +417,13 @@ int chat_send_to_group_cmd(int argc, char *argv[argc]) {
     }
 
     name_cpy(msg.dest, shared_data.chat_data->chat_groups[atoi(argv[2])]);
-    name_cpy(msg.sender, shared_data.chat_data->local_user.name);
-    msg.counter = ++shared_data.chat_data->local_user.last_seen_counter;
     mutex_unlock(shared_data.mutex);
 
     msg.dest_type = DEST_GROUP;
-    msg.content = (char *)argv[3];
   }
 
-  return send_message(&msg);
+  strncpy(msg.content, argv[3], MAX_MESSAGE_SIZE);
+  msg.content[MAX_MESSAGE_SIZE] = '\0';
+
+  return chat_send_message(&msg);
 }

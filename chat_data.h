@@ -17,7 +17,7 @@
 
 // Nombre maximum de favoris, contacts et groupes
 #define MAX_CONTACTS (100)
-#define MAX_GROUPS (50)
+#define MAX_GROUPS (20)
 
 // Structure représentant un contact de chat
 struct chat_contact {

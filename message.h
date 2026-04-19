@@ -13,9 +13,19 @@ struct message {
   char sender[NAME_SIZE];
   enum message_dest_type dest_type;
   char dest[NAME_SIZE];
-  char *content;
+  char content[MAX_MESSAGE_SIZE + 1];
   uint32_t counter;
 };
+
+// Message reçu, avec les métadonnées de réception (RSSI, SNR, ToA)
+struct received_message {
+  struct message msg;
+  int16_t rssi;
+  int8_t snr;
+  uint32_t toa;
+};
+
+/* ==== MESSAGE TO STRING ==== */
 
 // Convertit un message en chaîne de caractères pour expédition.
 void sprint_message(size_t buffer_size, char buffer[buffer_size],
@@ -24,7 +34,38 @@ void sprint_message(size_t buffer_size, char buffer[buffer_size],
 // Fonction d'affichage d'un message au format éxpédié.
 void print_message(const struct message *msg);
 
-// Envoie un message via le module LoRa.
-int send_message(struct message *msg);
+/* ==== MESSAGE_LISTENING ==== */
+
+// Convertit un message reçu en données
+// 0 - Success, other - Error (invalid format)
+int parse_message(size_t buffer_size, char buffer[buffer_size],
+                  struct message *msg);
+
+// Détermine si le message m'est destiné à moi ou à un groupe auquel je suis
+// inscrit. Retourne 1 si et seulement si le message doit être affiché, 0 sinon
+int filter_message(const struct message *msg,
+                   const struct sync_chat_data *data);
+
+// Ajoute un message à l'historique de mes messages (messages que j'ai envoyés
+// ou reçus destinés à moi)
+void add_message_to_my_history(struct message *msg,
+                               struct sync_chat_data *data);
+
+// Affiche les derniers messages que j'ai envoyés ou reçus destinés à moi
+void print_my_messages(size_t nb_msg);
+
+// Ajoute un message à l'historique des messages destinés à une autre
+// destination (différente de moi ou des groupes auxquels je suis inscrit)
+void add_message_to_other_dest_history(struct message *msg,
+                                       struct sync_chat_data *data);
+
+// Affiche les derniers messages destinés à une autre destination (différente de
+// moi ou des groupes auxquels je suis inscrit)
+void print_other_dest_messages(size_t nb_msg);
+
+// Fonction d'entrée du thread d'écoute des messages LoRa
+// Et effectue les bons traitements
+void main_listen_message_entry(size_t len, char *message, int16_t rssi,
+                               int8_t snr, uint32_t toa);
 
 #endif /* MESSAGE_SENDER_H */

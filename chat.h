@@ -8,6 +8,7 @@
 
 #include "architecture.h"
 #include "chat_data.h"
+#include "message.h"
 
 // Obtenir l'adresse des données partagées du chat (pour les autres modules)
 struct sync_chat_data *get_shared_chat_data(void);
@@ -47,6 +48,9 @@ int chat_group(int argc, char *argv[argc]);
 int chat_contact(int argc, char *argv[argc]);
 
 /* ---- FONCTIONS D'ENVOI DE MESSAGES ---- */
+
+// Envoie un message via le module LoRa. Le convertit en string d'abord
+int chat_send_message(struct message *msg);
 
 // Envoi d'un message en broadcast
 // Usage: send broadcast <message>

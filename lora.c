@@ -19,7 +19,9 @@
  * @author      Alexandre Abadie <alexandre.abadie@inria.fr>
  * @}
  */
+#include "lora.h"
 
+#include "message.h"
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,7 +52,7 @@
 static char stack[SX127X_STACKSIZE];
 static kernel_pid_t _recv_pid;
 
-static char message[32];
+static char message[MAX_MESSAGE_SIZE + 30];
 static sx127x_t sx127x;
 
 int lora_setup(int argc, char **argv) {
@@ -304,6 +306,14 @@ int lora_payload(int argc, char **argv) {
   return 0;
 }
 
+// =======================================================================
+
+static lora_message_callback_t _message_callback = NULL;
+
+void lora_set_message_callback(lora_message_callback_t callback) {
+  _message_callback = callback;
+}
+
 static void _event_cb(netdev_t *dev, netdev_event_t event) {
   if (event == NETDEV_EVENT_ISR) {
     msg_t msg;
@@ -325,10 +335,11 @@ static void _event_cb(netdev_t *dev, netdev_event_t event) {
     case NETDEV_EVENT_RX_COMPLETE:
       len = dev->driver->recv(dev, NULL, 0, 0);
       dev->driver->recv(dev, message, len, &packet_info);
-      printf("{Payload: \"%s\" (%d bytes), RSSI: %i, SNR: %i, TOA: %" PRIu32
-             "}\n",
-             message, (int)len, packet_info.rssi, (int)packet_info.snr,
-             sx127x_get_time_on_air((const sx127x_t *)dev, len));
+
+      if (_message_callback) {
+        _message_callback(len, message, packet_info.rssi, packet_info.snr,
+                          sx127x_get_time_on_air((const sx127x_t *)dev, len));
+      }
       break;
 
     case NETDEV_EVENT_TX_COMPLETE:
