@@ -1,6 +1,8 @@
 #include "chat.h"
 
+#include "contact.h"
 #include "eeprom.h"
+#include "group.h"
 #include "lora.h"
 #include "thread.h"
 #include "ztimer.h"
@@ -14,7 +16,7 @@ static struct chat_data chat_data;
 static struct sync_chat_data shared_data = {.chat_data = &chat_data,
                                             .mutex = &chat_mutex};
 
-#define SAVE_THREAD_STACK_SIZE (512)
+#define SAVE_THREAD_STACK_SIZE (256U)
 
 // Thread de sauvegarde périodique des données dans l'EEPROM
 static uint16_t period_sec = 10;
@@ -156,19 +158,10 @@ int chat_favorite(int argc, char *argv[argc]) {
 
   /* ----------- LS FAVORITES ----------- */
   if (strcmp(argv[1], "ls") == 0) {
-    printf("Favorite contacts:\n");
-    mutex_lock(shared_data.mutex);
-
-    for (size_t i = 0; i < MAX_CONTACTS; i++)
-      if (shared_data.chat_data->chat_contacts[i].is_favorite)
-        printf("  Name=%.4s, last_seen_counter=%lu\n",
-               shared_data.chat_data->chat_contacts[i].name,
-               shared_data.chat_data->chat_contacts[i].last_seen_counter);
-
-    mutex_unlock(shared_data.mutex);
+    list_favorite_contacts(&shared_data);
   }
 
-  /* ----------- ADD GROUP ----------- */
+  /* ----------- ADD FAVORITE ----------- */
   else if (strcmp(argv[1], "add") == 0) {
     if (argc != 3) {
       printf("Usage: %s add <contact_name>\n", argv[0]);
@@ -182,29 +175,17 @@ int chat_favorite(int argc, char *argv[argc]) {
       return 2;
     }
 
-    mutex_lock(shared_data.mutex);
-    int idx = get_contact_index(shared_data.chat_data, contact_name);
-    if (idx == -1) { // ajout du contact si le contact n'existe pas encore
-      idx = 0;
-      while (idx < MAX_CONTACTS &&
-             shared_data.chat_data->chat_contacts[idx].name[0] != '\0')
-        idx++;
-
-      if (idx == MAX_CONTACTS) {
-        mutex_unlock(shared_data.mutex);
-        printf("Error: contact list is full\n");
-        return 3;
-      }
-
-      name_cpy(shared_data.chat_data->chat_contacts[idx].name, contact_name);
-      shared_data.chat_data->chat_contacts[idx].last_seen_counter = 0;
+    int res = add_favorite_contact(&shared_data, contact_name);
+    if (res == 1) {
+      printf("Error: contact list is full\n");
+      return 3;
     }
 
-    shared_data.chat_data->chat_contacts[idx].is_favorite = 1;
-    mutex_unlock(shared_data.mutex);
-
     printf("Contact '%s' added to favorites successfully\n", contact_name);
-  } else {
+  }
+
+  /* ----------- RM FAVORITE ----------- */
+  else {
     if (argc != 3) {
       printf("Usage: %s rm <contact_name>\n", argv[0]);
       return 2;
@@ -217,19 +198,16 @@ int chat_favorite(int argc, char *argv[argc]) {
       return 2;
     }
 
-    mutex_lock(shared_data.mutex);
-    int idx = get_contact_index(shared_data.chat_data, contact_name);
-    if (idx == -1) {
-      mutex_unlock(shared_data.mutex);
+    int res = remove_favorite_contact(&shared_data, contact_name);
+    if (res == 1) {
       printf("Error: contact not found\n");
       return 3;
-    } else {
-      shared_data.chat_data->chat_contacts[idx].is_favorite = 0;
-      mutex_unlock(shared_data.mutex);
-
-      printf("Contact '%s' removed from favorites successfully\n",
-             contact_name);
+    } else if (res == 2) {
+      printf("Error: contact is not a favorite\n");
+      return 4;
     }
+
+    printf("Contact '%s' removed from favorites successfully\n", contact_name);
   }
 
   return 0;
@@ -244,9 +222,7 @@ int chat_group(int argc, char *argv[argc]) {
 
   /* ----------- LS GROUPS ----------- */
   if (strcmp(argv[1], "ls") == 0) {
-    mutex_lock(shared_data.mutex);
-    print_group_table(MAX_GROUPS, shared_data.chat_data->chat_groups);
-    mutex_unlock(shared_data.mutex);
+    list_groups(&shared_data);
   }
 
   /* ----------- ADD GROUP ----------- */
@@ -263,28 +239,15 @@ int chat_group(int argc, char *argv[argc]) {
       return 3;
     }
 
-    mutex_lock(shared_data.mutex);
-    int idx = get_group_index(shared_data.chat_data, group_name);
-    if (idx != -1) {
-      mutex_unlock(shared_data.mutex);
-      printf("Error: group already exists\n");
+    int res = join_group(&shared_data, group_name);
+    if (res == 1) {
+      printf("Error: already joined to this group\n");
       return 4;
-    }
-
-    idx = 0;
-    while (idx < MAX_GROUPS &&
-           shared_data.chat_data->chat_groups[idx][0] != '\0') {
-      idx++;
-    }
-
-    if (idx == MAX_GROUPS) {
-      mutex_unlock(shared_data.mutex);
+    } else if (res == 2) {
       printf("Error: group list is full\n");
       return 5;
     }
 
-    name_cpy(shared_data.chat_data->chat_groups[idx], group_name);
-    mutex_unlock(shared_data.mutex);
     printf("Group '%s' added successfully\n", group_name);
   }
 
@@ -302,17 +265,13 @@ int chat_group(int argc, char *argv[argc]) {
       return 3;
     }
 
-    mutex_lock(shared_data.mutex);
-    int idx = get_group_index(shared_data.chat_data, group_name);
-    if (idx == -1) {
-      mutex_unlock(shared_data.mutex);
-      printf("Error: group not found\n");
+    int res = leave_group(&shared_data, group_name);
+    if (res == 1) {
+      printf("Error: not joined to this group\n");
       return 4;
-    } else {
-      shared_data.chat_data->chat_groups[idx][0] = '\0';
-      mutex_unlock(shared_data.mutex);
-      printf("Group '%s' removed successfully\n", group_name);
     }
+
+    printf("Group '%s' removed successfully\n", group_name);
   }
 
   return 0;
@@ -324,11 +283,6 @@ int chat_contact(int argc, char *argv[argc]) {
     return 1;
   }
 
-  puts("List of view contacts:");
-
-  mutex_lock(shared_data.mutex);
-  print_contact_table(MAX_CONTACTS, shared_data.chat_data->chat_contacts);
-  mutex_unlock(shared_data.mutex);
-
+  list_contacts(&shared_data);
   return 0;
 }

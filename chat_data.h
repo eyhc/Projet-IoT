@@ -2,6 +2,7 @@
 #define CHAT_DATA_H
 
 #include "architecture.h"
+#include "mutex.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -54,6 +55,12 @@ struct chat_data {
   char chat_groups[MAX_GROUPS][NAME_SIZE];
 };
 
+// Structure partagée des données du chat, protégée par un mutex
+struct sync_chat_data {
+  struct chat_data *chat_data;
+  mutex_t *mutex;
+};
+
 /* ========================================================================== */
 
 // Comparaison de deux noms de contact (4 char)
@@ -72,21 +79,45 @@ static inline void name_cpy(char dest[NAME_SIZE], const char src[NAME_SIZE]) {
 
 /* ========================================================================== */
 
-static inline int get_contact_index(struct chat_data *data,
+// Obtenir l'index d'un contact à partir de son nom, ou -1 si le contact
+// n'existe pas
+static inline int get_contact_index(struct chat_contact *data,
                                     const char name[NAME_SIZE]) {
-  for (size_t i = 0; i < MAX_CONTACTS; i++) {
-    if (name_cmp(data->chat_contacts[i].name, name))
+  for (size_t i = 0; i < MAX_CONTACTS; i++)
+    if (name_cmp(data[i].name, name))
       return i;
-  }
+
   return -1;
 }
 
-static inline int get_group_index(struct chat_data *data,
-                                  const char name[NAME_SIZE]) {
-  for (size_t i = 0; i < MAX_GROUPS; i++) {
-    if (name_cmp(data->chat_groups[i], name))
+// Obtenir l'index d'un contact vide dans la liste des contacts, ou -1 si la
+// liste est pleine
+static inline int get_contact_empty_index(struct chat_contact *data) {
+  for (size_t i = 0; i < MAX_CONTACTS; i++)
+    if (data[i].name[0] == '\0')
       return i;
-  }
+
+  return -1;
+}
+
+// Obtenir l'index d'un groupe à partir de son nom, ou -1 si le groupe n'existe
+// pas
+static inline int get_group_index(char group[MAX_GROUPS][NAME_SIZE],
+                                  const char name[NAME_SIZE]) {
+  for (size_t i = 0; i < MAX_GROUPS; i++)
+    if (name_cmp(group[i], name))
+      return i;
+
+  return -1;
+}
+
+// Obtenir l'index d'un groupe vide dans la liste des groupes, ou -1 si la liste
+// est pleine
+static inline int get_group_empty_index(char group[MAX_GROUPS][NAME_SIZE]) {
+  for (size_t i = 0; i < MAX_GROUPS; i++)
+    if (group[i][0] == '\0')
+      return i;
+
   return -1;
 }
 

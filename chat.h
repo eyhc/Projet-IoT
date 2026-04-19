@@ -8,13 +8,6 @@
 
 #include "architecture.h"
 #include "chat_data.h"
-#include "mutex.h"
-
-// Structure partagée des données du chat, protégée par un mutex
-struct sync_chat_data {
-  struct chat_data *chat_data;
-  mutex_t *mutex;
-};
 
 /* ---- FONCTIONS DU CHAT ---- */
 
