@@ -31,15 +31,19 @@ make -j 8 flash
 - [X] Affichage de la liste des groupes de discussion auxquels je suis inscrit
 - [X] Suppression de mon inscription à un groupe de discussion
 
-- [ ] Envoi de message à un contact (enregistré ou non)
-- [ ] Envoi de message à un groupe de discussion
-- [ ] Affichage du message émis complet (exp, dest, contenu, etc.)
+- [X] Envoi de message à un contact (enregistré ou non / pas d'inscription auto)
+- [X] Envoi de message sur un groupe de discussion (inscription automatique)
+- [X] Affichage du message émis complet (exp, dest, contenu, etc.)
 
 - [ ] Filtrage des messages reçus (affichage uniquement des messages destinés à 
       moi ou à un groupe de discussion auquel je suis inscrit)
+
 - [ ] Lister les derniers messages reçus.
-- [ ] Ajout automatique d'un expéditeur inconnu à la liste des contacts
+- [ ] Ajout automatique d'un expéditeur inconnu à la liste des contacts.
+
+
 - [ ] Eviction LRU des contacts si la liste est pleine.
+
 
 - [ ] Emission télémétrique à une fréquence régulière paramétrable.
 

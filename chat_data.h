@@ -129,8 +129,8 @@ static inline void print_contact_table(size_t size,
                                        struct chat_contact c[size]) {
   for (size_t i = 0; i < size; i++)
     if (c[i].name[0] != '\0')
-      printf("  Name:%.4s, last_seen_counter:%lu, favorite:%u\n", c[i].name,
-             c[i].last_seen_counter, c[i].is_favorite);
+      printf("  %u: Name:%.4s, last_seen_counter:%lu, favorite:%u\n", i,
+             c[i].name, c[i].last_seen_counter, c[i].is_favorite);
 }
 
 // Permet l'affichage d'un tableau de groupes de chat de manière lisible (pour
@@ -138,7 +138,7 @@ static inline void print_contact_table(size_t size,
 static inline void print_group_table(size_t size, char c[size][NAME_SIZE]) {
   for (size_t i = 0; i < size; i++)
     if (c[i][0] != '\0')
-      printf("  %.4s", c[i]);
+      printf("  %u:%.4s", i, c[i]);
 
   puts("");
 }

@@ -32,9 +32,9 @@ void list_favorite_contacts(struct sync_chat_data *data) {
 int add_favorite_contact(struct sync_chat_data *data, const char *name) {
   mutex_lock(data->mutex);
 
-  int idx = get_contact_index(data->chat_data, name);
+  int idx = get_contact_index(data->chat_data->chat_contacts, name);
   if (idx == -1) { // ajout du contact si le contact n'existe pas encore
-    idx = get_contact_empty_index(data->chat_data);
+    idx = get_contact_empty_index(data->chat_data->chat_contacts);
 
     if (idx == -1)
       return 1; // no empty slot
@@ -45,11 +45,12 @@ int add_favorite_contact(struct sync_chat_data *data, const char *name) {
 
   data->chat_data->chat_contacts[idx].is_favorite = 1;
   mutex_unlock(data->mutex);
+  return 0;
 }
 
 int remove_favorite_contact(struct sync_chat_data *data, const char *name) {
   mutex_lock(data->mutex);
-  int idx = get_contact_index(data->chat_data, name);
+  int idx = get_contact_index(data->chat_data->chat_contacts, name);
   if (idx == -1) { // contact not found
     mutex_unlock(data->mutex);
     return 3;

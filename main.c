@@ -19,6 +19,9 @@ static const shell_command_t shell_commands[] = {
     {"favorite", "Manage favorite contacts", chat_favorite},
     {"group", "Manage discussion groups", chat_group},
     {"contact", "Manage contacts", chat_contact},
+    {"send_broadcast", "Send a broadcast message", chat_send_broadcast_cmd},
+    {"send_contact", "Send a message to a contact", chat_send_to_contact_cmd},
+    {"send_group", "Send a message to a group", chat_send_to_group_cmd},
     {NULL, NULL, NULL}};
 
 int main(void) {
