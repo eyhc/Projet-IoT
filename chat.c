@@ -17,6 +17,8 @@ static struct chat_data chat_data;
 static struct sync_chat_data shared_data = {.chat_data = &chat_data,
                                             .mutex = &chat_mutex};
 
+struct sync_chat_data *get_shared_chat_data(void) { return &shared_data; }
+
 #define SAVE_THREAD_STACK_SIZE (256U)
 
 // Thread de sauvegarde périodique des données dans l'EEPROM
@@ -91,13 +93,13 @@ void chat_init(uint32_t period_s) {
            shared_data.chat_data->lora_channel);
   mutex_unlock(shared_data.mutex);
 
-  init_sx1272_cmd(0, NULL);
-  lora_channel_cmd(3, (char *[]){"channel", "set", channel_str});
-  lora_setup_cmd(4, (char *[]){"lora_setup", bandwidth_str,
-                               spreading_factor_str, code_rate_str});
-  lora_crc_cmd(3, (char *[]){"lora_crc", "set", crc_str});
-  lora_implicit_cmd(3, (char *[]){"lora_implicit", "set", implicit_header_str});
-  lora_syncword_cmd(3, (char *[]){"lora_syncword", "set", syncword_str});
+  init_sx1272(0, NULL);
+  lora_channel(3, (char *[]){"channel", "set", channel_str});
+  lora_setup(4, (char *[]){"lora_setup", bandwidth_str, spreading_factor_str,
+                           code_rate_str});
+  lora_crc(3, (char *[]){"lora_crc", "set", crc_str});
+  lora_implicit(3, (char *[]){"lora_implicit", "set", implicit_header_str});
+  lora_syncword(3, (char *[]){"lora_syncword", "set", syncword_str});
 }
 
 /* ====================== INFO / CONTACTS / GROUPES ====================== */

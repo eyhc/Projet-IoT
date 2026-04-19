@@ -53,7 +53,7 @@ static kernel_pid_t _recv_pid;
 static char message[32];
 static sx127x_t sx127x;
 
-int lora_setup_cmd(int argc, char **argv) {
+int lora_setup(int argc, char **argv) {
   if (argc < 4) {
     puts("usage: setup "
          "<bandwidth (125, 250, 500)> "
@@ -131,7 +131,7 @@ uint32_t lora_random(void) {
   return rand;
 }
 
-int lora_send_cmd(int argc, char **argv) {
+int lora_send(int argc, char **argv) {
   if (argc <= 1) {
     puts("usage: send <payload>");
     return -1;
@@ -151,7 +151,7 @@ int lora_send_cmd(int argc, char **argv) {
   return 0;
 }
 
-int lora_listen_cmd(int argc, char **argv) {
+int lora_listen(int argc, char **argv) {
   (void)argc;
   (void)argv;
 
@@ -174,7 +174,7 @@ int lora_listen_cmd(int argc, char **argv) {
   return 0;
 }
 
-int lora_syncword_cmd(int argc, char **argv) {
+int lora_syncword(int argc, char **argv) {
   if (argc < 2) {
     puts("usage: syncword <get|set>");
     return -1;
@@ -205,7 +205,7 @@ int lora_syncword_cmd(int argc, char **argv) {
   return 0;
 }
 
-int lora_channel_cmd(int argc, char **argv) {
+int lora_channel(int argc, char **argv) {
   if (argc < 2) {
     puts("usage: channel <get|set>");
     return -1;
@@ -236,7 +236,7 @@ int lora_channel_cmd(int argc, char **argv) {
   return 0;
 }
 
-int lora_reset_cmd(int argc, char **argv) {
+int lora_reset(int argc, char **argv) {
   (void)argc;
   (void)argv;
   netdev_t *netdev = &sx127x.netdev;
@@ -261,7 +261,7 @@ static void _set_opt(netdev_t *netdev, netopt_t opt, bool val, char *str_help) {
   printf("%s\n", str_help);
 }
 
-int lora_crc_cmd(int argc, char **argv) {
+int lora_crc(int argc, char **argv) {
   netdev_t *netdev = &sx127x.netdev;
 
   if (argc < 3 || strcmp(argv[1], "set") != 0) {
@@ -275,7 +275,7 @@ int lora_crc_cmd(int argc, char **argv) {
   return 0;
 }
 
-int lora_implicit_cmd(int argc, char **argv) {
+int lora_implicit(int argc, char **argv) {
   netdev_t *netdev = &sx127x.netdev;
 
   if (argc < 3 || strcmp(argv[1], "set") != 0) {
@@ -289,7 +289,7 @@ int lora_implicit_cmd(int argc, char **argv) {
   return 0;
 }
 
-int lora_payload_cmd(int argc, char **argv) {
+int lora_payload(int argc, char **argv) {
   netdev_t *netdev = &sx127x.netdev;
 
   if (argc < 3 || strcmp(argv[1], "set") != 0) {
@@ -369,7 +369,7 @@ void *_recv_thread(void *arg) {
   }
 }
 
-int init_sx1272_cmd(int argc, char **argv) {
+int init_sx1272(int argc, char **argv) {
   (void)argc;
   (void)argv;
   sx127x.params = sx127x_params[0];

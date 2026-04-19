@@ -76,4 +76,24 @@ group add <group> : Inscription à un groupe de discussion
 group ls : Affichage de la liste des groupes de discussion auxquels je suis inscrit
 group rm <group> : Suppression de mon inscription à un groupe de discussion
 contact ls : Affichage de la liste des contacts
+send_broadcast <message> : Envoi d'un message à tous les utilisateurs
+send_contact alias <contact> <message> : Envoi d'un message via son alias (4 caractères ascii)
+send_contact id    <id> <message> : Envoi d'un message à un contact 
+                                    (id dans la liste des contacts)
+send_group   alias <group> <message> : Envoi d'un message sur un groupe de discussion
+send_group   id    <id> <message> : Envoi d'un message sur un groupe de discussion 
+                                    (id dans la liste des groupes de discussion)
+force_rcv <message> : Simule la réception d'un message (pour les tests)
 ```
+
+
+## Fichiers
+
+- `main.c` : point d'entrée du programme, initialisation des modules et lancement du shell.
+- `eeprom.h/c` : gestion de la mémoire eeprom pour la sauvegarde des données du chat.
+- `lora.h/c` : interface de communication avec le module LoRa (sx127x).
+- `message.h/c` : définition de la structure de message et fonctions associées (formatage, envoi, parsing, queue fifo, etc.).
+- `chat_data.h`: définition de la structure de données du chat (contacts, groupes, etc.) et fonctions associées.
+- `chat.c` : implémentation des commandes du chat et de la logique de gestion des messages, contacts, groupes, etc.
+- `group.c` : implémentation des fonctions de gestion des groupes de discussion.
+- `contact.c` : implémentation des fonctions de gestion des contacts.

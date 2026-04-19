@@ -6,11 +6,77 @@
 
 #define SAVE_PERIOD_SEC (600U)
 
+int lora_setup_cmd(int argc, char **argv) {
+  int res = lora_setup(argc, argv);
+
+  if (res == 0) {
+    struct sync_chat_data *shared_data = get_shared_chat_data();
+    mutex_lock(shared_data->mutex);
+    shared_data->chat_data->lora_bw = atoi(argv[1]);
+    shared_data->chat_data->lora_sf = atoi(argv[2]);
+    shared_data->chat_data->lora_cr = atoi(argv[3]);
+    mutex_unlock(shared_data->mutex);
+  }
+
+  return res;
+}
+
+int lora_implicit_cmd(int argc, char **argv) {
+  int res = lora_implicit(argc, argv);
+
+  if (res == 0) {
+    struct sync_chat_data *shared_data = get_shared_chat_data();
+    mutex_lock(shared_data->mutex);
+    shared_data->chat_data->lora_implicit = atoi(argv[2]);
+    mutex_unlock(shared_data->mutex);
+  }
+
+  return res;
+}
+
+int lora_crc_cmd(int argc, char **argv) {
+  int res = lora_crc(argc, argv);
+
+  if (res == 0) {
+    struct sync_chat_data *shared_data = get_shared_chat_data();
+    mutex_lock(shared_data->mutex);
+    shared_data->chat_data->lora_crc = atoi(argv[2]);
+    mutex_unlock(shared_data->mutex);
+  }
+
+  return res;
+}
+
+int lora_syncword_cmd(int argc, char **argv) {
+  int res = lora_syncword(argc, argv);
+
+  if (res == 0) {
+    struct sync_chat_data *shared_data = get_shared_chat_data();
+    mutex_lock(shared_data->mutex);
+    shared_data->chat_data->lora_syncword = atoi(argv[2]);
+    mutex_unlock(shared_data->mutex);
+  }
+
+  return res;
+}
+
+int lora_channel_cmd(int argc, char **argv) {
+  int res = lora_channel(argc, argv);
+
+  if (res == 0) {
+    struct sync_chat_data *shared_data = get_shared_chat_data();
+    mutex_lock(shared_data->mutex);
+    shared_data->chat_data->lora_channel = atol(argv[2]);
+    mutex_unlock(shared_data->mutex);
+  }
+
+  return res;
+}
+
 static const shell_command_t shell_commands[] = {
     {"lora_setup", "Initialize LoRa modulation settings", lora_setup_cmd},
     {"lora_implicit", "Enable implicit header", lora_implicit_cmd},
     {"lora_crc", "Enable CRC", lora_crc_cmd},
-    {"lora_payload", "Set payload length (implicit header)", lora_payload_cmd},
     {"lora_syncword", "Get/Set the syncword", lora_syncword_cmd},
     {"lora_channel", "Get/Set channel frequency (in Hz)", lora_channel_cmd},
     {"eeprom_print", "Print the content of the EEPROM", eeprom_print_data_cmd},

@@ -39,5 +39,5 @@ void print_message(const struct message *msg) {
 
 int send_message(struct message *msg) {
   sprint_message(sizeof(buffer), buffer, msg);
-  return lora_send_cmd(2, (char *[]){"lora_send", buffer});
+  return lora_send(2, (char *[]){"lora_send", buffer});
 }

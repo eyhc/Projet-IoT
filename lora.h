@@ -3,16 +3,16 @@
 
 #include <stdint.h>
 
-int init_sx1272_cmd(int argc, char **argv);
-int lora_setup_cmd(int argc, char **argv);
-int lora_implicit_cmd(int argc, char **argv);
-int lora_crc_cmd(int argc, char **argv);
-int lora_payload_cmd(int argc, char **argv);
-int lora_syncword_cmd(int argc, char **argv);
-int lora_channel_cmd(int argc, char **argv);
-int lora_send_cmd(int argc, char **argv);
-int lora_listen_cmd(int argc, char **argv);
-int lora_reset_cmd(int argc, char **argv);
+int init_sx1272(int argc, char **argv);
+int lora_setup(int argc, char **argv);
+int lora_implicit(int argc, char **argv);
+int lora_crc(int argc, char **argv);
+int lora_payload(int argc, char **argv);
+int lora_syncword(int argc, char **argv);
+int lora_channel(int argc, char **argv);
+int lora_send(int argc, char **argv);
+int lora_listen(int argc, char **argv);
+int lora_reset(int argc, char **argv);
 uint32_t lora_random(void);
 
 #endif /* LORA_H */

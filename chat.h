@@ -9,6 +9,9 @@
 #include "architecture.h"
 #include "chat_data.h"
 
+// Obtenir l'adresse des données partagées du chat (pour les autres modules)
+struct sync_chat_data *get_shared_chat_data(void);
+
 /* ---- Utilisateurs, contacts et groupes ---- */
 
 // Initialisation du chat : lecture des données dans l'EEPROM, initialisation du
