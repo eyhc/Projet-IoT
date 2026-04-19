@@ -329,7 +329,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event) {
     netdev_lora_rx_info_t packet_info;
     switch (event) {
     case NETDEV_EVENT_RX_STARTED:
-      puts("Data reception started");
+      // puts("Data reception started");
       break;
 
     case NETDEV_EVENT_RX_COMPLETE:
@@ -344,7 +344,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event) {
 
     case NETDEV_EVENT_TX_COMPLETE:
       sx127x_set_sleep(&sx127x);
-      puts("Transmission completed");
+      // puts("Transmission completed");
       break;
 
     case NETDEV_EVENT_CAD_DONE:

@@ -18,6 +18,8 @@ void eeprom_read_data(struct chat_data *data) {
   eeprom_read(0, (uint8_t *)data, sizeof(struct chat_data));
 }
 
+void eeprom_erase_all(void) { eeprom_erase(); }
+
 // Lit les données de l'EEPROM au format struct eeprom_data,
 // et affiche les données lues à l'écran de manière lisible (pour le debug)
 static struct chat_data data;

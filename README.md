@@ -39,12 +39,12 @@ make -j 8 flash
 
 - [X] Filtrage des messages reçus (affichage uniquement des messages destinés à 
       moi ou à un groupe de discussion auquel je suis inscrit)
-- [ ] Lister les derniers messages reçus (filtrés ou non)
+- [ ] Sauvegarder et lister les derniers messages reçus (filtrés ou non)
 
 - [X] Ajout automatique d'un expéditeur inconnu à la liste des contacts
 - [ ] Eviction LRU des contacts si la liste est pleine.
 
-- [ ] Emission télémétrique à une fréquence régulière paramétrable.
+- [X] Emission télémétrique à une fréquence régulière paramétrable.
 
 **LoraMeshChat**
 
@@ -86,6 +86,12 @@ send_group   id    <id> <message> : Envoi d'un message sur un groupe de discussi
 force_rcv <message> : Simule la réception d'un message (pour les tests)
 force_rcv <message> <rssi> <snr> <toa> : Idem que précedent mais avec des 
                                         paramètres de réception personnalisés
+telemetry start <interval> : Démarrage de l'émission télémétrique à une fréquence 
+                            d'émission de interval secondes
+telemetry stop : Arrêt de l'émission télémétrique
+telemetry print : Affichage des données de télémétrie actuelles
+telemetry print_lpp_cayenne : Affichage des données de télémétrie actuelles au format Cayenne LPP
+telemetry set_period <interval> : Modification de la période d'émission télémétrique à interval secondes
 ```
 
 
@@ -99,3 +105,4 @@ force_rcv <message> <rssi> <snr> <toa> : Idem que précedent mais avec des
 - `chat.c` : implémentation des commandes du chat et de la logique de gestion des messages, contacts, groupes, etc.
 - `group.c` : implémentation des fonctions de gestion des groupes de discussion.
 - `contact.c` : implémentation des fonctions de gestion des contacts.
+- `telemetry.c` : implémentation de l'émission télémétrique périodique.

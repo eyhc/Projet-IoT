@@ -3,6 +3,7 @@
 #include "eeprom.h"
 #include "lora.h"
 #include "shell.h"
+#include "telemetry.h"
 
 #define SAVE_PERIOD_SEC (600U)
 
@@ -94,6 +95,43 @@ int rx_msg_cmd(int argc, char **argv) {
   return 0;
 }
 
+int telemetry_cmd(int argc, char **argv) {
+  if (argc < 2) {
+    printf("Usage: %s [start|stop|print|print_lpp_cayenne|set_period]\n",
+           argv[0]);
+    return 1;
+  }
+
+  if (strcmp(argv[1], "start") == 0) {
+    if (argc != 3) {
+      printf("Usage: %s start <interval_s>\n", argv[0]);
+      return 3;
+    }
+
+    telemetry_change_publish_period(atoi(argv[2]));
+    telemetry_start();
+  } else if (strcmp(argv[1], "stop") == 0) {
+    telemetry_stop();
+  } else if (strcmp(argv[1], "print") == 0) {
+    telemetry_print();
+  } else if (strcmp(argv[1], "print_lpp_cayenne") == 0) {
+    telemetry_print_lpp_cayenne();
+  } else if (strcmp(argv[1], "set_period") == 0) {
+    if (argc != 3) {
+      printf("Usage: %s set_period <period_s>\n", argv[0]);
+      return 2;
+    }
+    telemetry_change_publish_period(atoi(argv[2]));
+    printf("Telemetry publish period set to %s seconds\n", argv[2]);
+  } else {
+    printf("Usage: %s [start|stop|print|print_lpp_cayenne|set_period]\n",
+           argv[0]);
+    return 1;
+  }
+
+  return 0;
+}
+
 static const shell_command_t shell_commands[] = {
     {"lora_setup", "Initialize LoRa modulation settings", lora_setup_cmd},
     {"lora_implicit", "Enable implicit header", lora_implicit_cmd},
@@ -110,11 +148,13 @@ static const shell_command_t shell_commands[] = {
     {"send_contact", "Send a message to a contact", chat_send_to_contact_cmd},
     {"send_group", "Send a message to a group", chat_send_to_group_cmd},
     {"force_rcv", "Simulate the reception of a msg (for testing)", rx_msg_cmd},
+    {"telemetry", "Manage telemetry", telemetry_cmd},
     {NULL, NULL, NULL}};
 
 int main(void) {
   /* initialisation du chat (+ lora + eeprom) */
   chat_init(SAVE_PERIOD_SEC);
+  telemetry_init();
 
   /* start the shell */
   puts("Initialization successful - starting the shell now");

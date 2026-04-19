@@ -14,6 +14,9 @@
 void eeprom_write_data(struct chat_data *data);
 void eeprom_read_data(struct chat_data *data);
 
+// Effacer toutes les données de l'EEPROM
+void eeprom_erase_all(void);
+
 // Fonction à utiliser pour s'assurer que la structure de données tient bien
 // dans l'EEPROM. Si ce n'est pas le cas, il faut réduire la taille des tableaux
 // de contacts ou des groupes

@@ -14,6 +14,8 @@ BOARD ?= wyres-base
 
 FEATURES_REQUIRED += periph_eeprom
 
+USEPKG += cayenne-lpp
+
 USEMODULE += od
 USEMODULE += ps
 USEMODULE += shell
@@ -21,6 +23,9 @@ USEMODULE += shell_cmds_default
 #USEMODULE += shell_commands
 USEMODULE += fmt
 USEMODULE += ztimer_sec
+USEMODULE += xtimer
+USEMODULE += lis2dh12_i2c
+USEMODULE += lps22hb
 
 DRIVER ?= sx1272
 # use SX1276 by default

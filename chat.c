@@ -54,6 +54,17 @@ void chat_init(uint32_t period_s) {
     shared_data.chat_data->lora_crc = 1;
     shared_data.chat_data->lora_implicit = 0;
     shared_data.chat_data->lora_syncword = 0x22;
+    name_cpy(shared_data.chat_data->local_user.name, "\0\0\0\0");
+    shared_data.chat_data->local_user.last_seen_counter = 0;
+    shared_data.chat_data->local_user.is_favorite = 0;
+    for (size_t i = 0; i < MAX_CONTACTS; i++) {
+      name_cpy(shared_data.chat_data->chat_contacts[i].name, "\0\0\0\0");
+      shared_data.chat_data->chat_contacts[i].last_seen_counter = 0;
+      shared_data.chat_data->chat_contacts[i].is_favorite = 0;
+    }
+    for (size_t i = 0; i < MAX_GROUPS; i++) {
+      name_cpy(shared_data.chat_data->chat_groups[i], "\0\0\0\0");
+    }
     eeprom_write_data(shared_data.chat_data);
   }
   mutex_unlock(shared_data.mutex);
