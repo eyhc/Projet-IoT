@@ -15,9 +15,8 @@
 #define NAME_SIZE (4)
 
 // Nombre maximum de favoris, contacts et groupes
-#define MAX_FAVORITES (50)
-#define MAX_CONTACTS (200)
-#define MAX_GROUPS (100)
+#define MAX_CONTACTS (100)
+#define MAX_GROUPS (50)
 
 // Structure représentant un contact de chat
 struct chat_contact {
@@ -26,7 +25,10 @@ struct chat_contact {
 
   // Et un compteur dont on garde la trace du dernier message vu de ce contact
   // pour éviter les doublons de messages
-  uint64_t last_seen_counter;
+  uint32_t last_seen_counter;
+
+  // Permet de différencier les favoris des contacts normaux
+  uint8_t is_favorite;
 };
 
 // Structure représentant les données à stocker dans l'EEPROM
@@ -47,11 +49,12 @@ struct chat_data {
   // Données de l'utilisateur local (son nom et son compteur de messages)
   struct chat_contact local_user;
 
-  // Données de l'application : les favoris, les contacts et les groupes de chat
-  struct chat_contact chat_favorites[MAX_FAVORITES];
+  // Données de l'application : les contacts et les groupes de chat
   struct chat_contact chat_contacts[MAX_CONTACTS];
-  struct chat_contact chat_groups[MAX_GROUPS];
+  char chat_groups[MAX_GROUPS][NAME_SIZE];
 };
+
+/* ========================================================================== */
 
 // Comparaison de deux noms de contact (4 char)
 static inline int name_cmp(const char a[NAME_SIZE], const char b[NAME_SIZE]) {
@@ -67,16 +70,66 @@ static inline void name_cpy(char dest[NAME_SIZE], const char src[NAME_SIZE]) {
   (dest)[3] = (src)[3];
 }
 
+/* ========================================================================== */
+
+static inline int get_contact_index(struct chat_data *data,
+                                    const char name[NAME_SIZE]) {
+  for (size_t i = 0; i < MAX_CONTACTS; i++) {
+    if (name_cmp(data->chat_contacts[i].name, name))
+      return i;
+  }
+  return -1;
+}
+
+static inline int get_group_index(struct chat_data *data,
+                                  const char name[NAME_SIZE]) {
+  for (size_t i = 0; i < MAX_GROUPS; i++) {
+    if (name_cmp(data->chat_groups[i], name))
+      return i;
+  }
+  return -1;
+}
+
+/* ========================================================================== */
+
 // Permet l'affichage d'un tableau de contacts de chat (favoris, contacts ou
 // groupes) de manière lisible (pour le debug)
 static inline void print_contact_table(size_t size,
                                        struct chat_contact c[size]) {
-  for (size_t i = 0; i < size; i++) {
-    if (c[i].name[0] != '\0') {
-      printf("  Name=%.4s, last_seen_counter=%lu\n", c[i].name,
-             (unsigned long)c[i].last_seen_counter);
-    }
-  }
+  for (size_t i = 0; i < size; i++)
+    if (c[i].name[0] != '\0')
+      printf("  Name:%.4s, last_seen_counter:%lu, favorite:%u\n", c[i].name,
+             c[i].last_seen_counter, c[i].is_favorite);
+}
+
+// Permet l'affichage d'un tableau de groupes de chat de manière lisible (pour
+// le debug)
+static inline void print_group_table(size_t size, char c[size][NAME_SIZE]) {
+  for (size_t i = 0; i < size; i++)
+    if (c[i][0] != '\0')
+      printf("  %.4s", c[i]);
+
+  puts("");
+}
+
+// Affichage de l'ensemble des données du chat (pour le debug)
+static inline void print_chat_data(struct chat_data *data) {
+  printf("LoRa channel: %lu\n", data->lora_channel);
+  printf("LoRa bandwidth: %u\n", data->lora_bw);
+  printf("LoRa spreading factor: %u\n", data->lora_sf);
+  printf("LoRa coding rate: %u\n", data->lora_cr);
+  printf("LoRa CRC enabled: %u\n", data->lora_crc);
+  printf("LoRa implicit header: %u\n", data->lora_implicit);
+  printf("LoRa syncword: %u\n", data->lora_syncword);
+
+  printf("Local user name: %.4s\n", data->local_user.name);
+  printf("Local user msg counter: %lu\n", data->local_user.last_seen_counter);
+
+  printf("Chat contacts:\n");
+  print_contact_table(MAX_CONTACTS, data->chat_contacts);
+
+  printf("Chat groups:\n");
+  print_group_table(MAX_GROUPS, data->chat_groups);
 }
 
 #endif /* CHAT_DATA_H */

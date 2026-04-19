@@ -227,7 +227,7 @@ int lora_channel_cmd(int argc, char **argv) {
     }
     chan = atoi(argv[2]);
     netdev->driver->set(netdev, NETOPT_CHANNEL_FREQUENCY, &chan, sizeof(chan));
-    printf("New channel set\n");
+    printf("New channel set to %lu\n", chan);
   } else {
     puts("usage: channel <get|set>");
     return -1;

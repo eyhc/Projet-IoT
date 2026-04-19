@@ -97,6 +97,18 @@ void chat_init(uint32_t period_s) {
   lora_syncword_cmd(3, (char *[]){"lora_syncword", "set", syncword_str});
 }
 
+int chat_info(int argc, char *argv[argc]) {
+  (void)argc;
+  (void)argv;
+
+  puts("Chat information:");
+  mutex_lock(shared_data.mutex);
+  print_chat_data(shared_data.chat_data);
+  mutex_unlock(shared_data.mutex);
+
+  return 0;
+}
+
 int chat_username(int argc, char *argv[argc]) {
   if (argc < 2 ||
       (strcmp(argv[1], "get") != 0 && strcmp(argv[1], "set") != 0)) {
@@ -131,6 +143,192 @@ int chat_username(int argc, char *argv[argc]) {
 
     printf("Username set to '%s'\n", new_username);
   }
+
+  return 0;
+}
+
+int chat_favorite(int argc, char *argv[argc]) {
+  if (argc < 2 || (strcmp(argv[1], "add") != 0 && strcmp(argv[1], "rm") != 0 &&
+                   strcmp(argv[1], "ls") != 0)) {
+    printf("Usage: %s <add|rm|ls>\n", argv[0]);
+    return 1;
+  }
+
+  /* ----------- LS FAVORITES ----------- */
+  if (strcmp(argv[1], "ls") == 0) {
+    printf("Favorite contacts:\n");
+    mutex_lock(shared_data.mutex);
+
+    for (size_t i = 0; i < MAX_CONTACTS; i++)
+      if (shared_data.chat_data->chat_contacts[i].is_favorite)
+        printf("  Name=%.4s, last_seen_counter=%lu\n",
+               shared_data.chat_data->chat_contacts[i].name,
+               shared_data.chat_data->chat_contacts[i].last_seen_counter);
+
+    mutex_unlock(shared_data.mutex);
+  }
+
+  /* ----------- ADD GROUP ----------- */
+  else if (strcmp(argv[1], "add") == 0) {
+    if (argc != 3) {
+      printf("Usage: %s add <contact_name>\n", argv[0]);
+      return 2;
+    }
+
+    const char *contact_name = argv[2];
+    if (strlen(contact_name) != NAME_SIZE) {
+      printf("Error: contact name must be exactly %d characters long\n",
+             NAME_SIZE);
+      return 2;
+    }
+
+    mutex_lock(shared_data.mutex);
+    int idx = get_contact_index(shared_data.chat_data, contact_name);
+    if (idx == -1) { // ajout du contact si le contact n'existe pas encore
+      idx = 0;
+      while (idx < MAX_CONTACTS &&
+             shared_data.chat_data->chat_contacts[idx].name[0] != '\0')
+        idx++;
+
+      if (idx == MAX_CONTACTS) {
+        mutex_unlock(shared_data.mutex);
+        printf("Error: contact list is full\n");
+        return 3;
+      }
+
+      name_cpy(shared_data.chat_data->chat_contacts[idx].name, contact_name);
+      shared_data.chat_data->chat_contacts[idx].last_seen_counter = 0;
+    }
+
+    shared_data.chat_data->chat_contacts[idx].is_favorite = 1;
+    mutex_unlock(shared_data.mutex);
+
+    printf("Contact '%s' added to favorites successfully\n", contact_name);
+  } else {
+    if (argc != 3) {
+      printf("Usage: %s rm <contact_name>\n", argv[0]);
+      return 2;
+    }
+
+    const char *contact_name = argv[2];
+    if (strlen(contact_name) != NAME_SIZE) {
+      printf("Error: contact name must be exactly %d characters long\n",
+             NAME_SIZE);
+      return 2;
+    }
+
+    mutex_lock(shared_data.mutex);
+    int idx = get_contact_index(shared_data.chat_data, contact_name);
+    if (idx == -1) {
+      mutex_unlock(shared_data.mutex);
+      printf("Error: contact not found\n");
+      return 3;
+    } else {
+      shared_data.chat_data->chat_contacts[idx].is_favorite = 0;
+      mutex_unlock(shared_data.mutex);
+
+      printf("Contact '%s' removed from favorites successfully\n",
+             contact_name);
+    }
+  }
+
+  return 0;
+}
+
+int chat_group(int argc, char *argv[argc]) {
+  if (argc < 2 || (strcmp(argv[1], "add") != 0 && strcmp(argv[1], "rm") != 0 &&
+                   strcmp(argv[1], "ls") != 0)) {
+    printf("Usage: %s <add|rm|ls>\n", argv[0]);
+    return 1;
+  }
+
+  /* ----------- LS GROUPS ----------- */
+  if (strcmp(argv[1], "ls") == 0) {
+    mutex_lock(shared_data.mutex);
+    print_group_table(MAX_GROUPS, shared_data.chat_data->chat_groups);
+    mutex_unlock(shared_data.mutex);
+  }
+
+  /* ----------- ADD GROUP ----------- */
+  else if (strcmp(argv[1], "add") == 0) {
+    if (argc != 3) {
+      printf("Usage: %s add <group_name>\n", argv[0]);
+      return 2;
+    }
+
+    const char *group_name = argv[2];
+    if (strlen(group_name) != NAME_SIZE) {
+      printf("Error: group name must be exactly %d characters long\n",
+             NAME_SIZE);
+      return 3;
+    }
+
+    mutex_lock(shared_data.mutex);
+    int idx = get_group_index(shared_data.chat_data, group_name);
+    if (idx != -1) {
+      mutex_unlock(shared_data.mutex);
+      printf("Error: group already exists\n");
+      return 4;
+    }
+
+    idx = 0;
+    while (idx < MAX_GROUPS &&
+           shared_data.chat_data->chat_groups[idx][0] != '\0') {
+      idx++;
+    }
+
+    if (idx == MAX_GROUPS) {
+      mutex_unlock(shared_data.mutex);
+      printf("Error: group list is full\n");
+      return 5;
+    }
+
+    name_cpy(shared_data.chat_data->chat_groups[idx], group_name);
+    mutex_unlock(shared_data.mutex);
+    printf("Group '%s' added successfully\n", group_name);
+  }
+
+  /* ----------- RM GROUP ----------- */
+  else {
+    if (argc != 3) {
+      printf("Usage: %s rm <group_name>\n", argv[0]);
+      return 2;
+    }
+
+    const char *group_name = argv[2];
+    if (strlen(group_name) != NAME_SIZE) {
+      printf("Error: group name must be exactly %d characters long\n",
+             NAME_SIZE);
+      return 3;
+    }
+
+    mutex_lock(shared_data.mutex);
+    int idx = get_group_index(shared_data.chat_data, group_name);
+    if (idx == -1) {
+      mutex_unlock(shared_data.mutex);
+      printf("Error: group not found\n");
+      return 4;
+    } else {
+      shared_data.chat_data->chat_groups[idx][0] = '\0';
+      mutex_unlock(shared_data.mutex);
+      printf("Group '%s' removed successfully\n", group_name);
+    }
+  }
+
+  return 0;
+}
+
+int chat_contact(int argc, char *argv[argc]) {
+  if (argc != 2 || strcmp(argv[1], "ls") != 0) {
+    printf("Usage: %s ls\n", argv[0]);
+    return 1;
+  }
+
+  puts("List of view contacts:");
+
+  mutex_lock(shared_data.mutex);
+  print_contact_table(MAX_CONTACTS, shared_data.chat_data->chat_contacts);
+  mutex_unlock(shared_data.mutex);
 
   return 0;
 }
