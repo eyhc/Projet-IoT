@@ -25,10 +25,12 @@ static lpsxxx_t lps_dev;
 static lis2dh12_t lis_dev;
 
 static uint16_t publish_preiod_s = 60U;
+static bool publish_broadcast = false;
+static char publish_group[4] = {'\0'};
 
-void telemetry_change_publish_period(uint16_t period_s) {
-  publish_preiod_s = period_s;
-}
+void telemetry_set_period(uint16_t period_s) { publish_preiod_s = period_s; }
+void telemetry_set_dest_group(char name[4]) { name_cpy(publish_group, name); }
+void telemetry_set_broadcast(int broadcast) { publish_broadcast = broadcast; }
 
 static void sprint_lpp_cayenne(struct telemetry *t, size_t size,
                                char out[size]) {
@@ -81,9 +83,6 @@ void *_telemetry_thread(void *arg) {
     name_cpy(msg.sender, shared_data->chat_data->local_user.name);
     mutex_unlock(shared_data->mutex);
 
-    msg.dest_type = DEST_BROADCAST;
-    msg.dest[0] = '\0';
-
     struct telemetry t;
     telemetry_read(&t);
     sprint_lpp_cayenne(&t, sizeof(msg.content) - 4, msg.content + 3);
@@ -92,7 +91,15 @@ void *_telemetry_thread(void *arg) {
     msg.content[2] = 'p';
     msg.content[MAX_MESSAGE_SIZE] = '\0';
 
-    chat_send_message(&msg);
+    if (publish_broadcast) {
+      msg.dest_type = DEST_BROADCAST;
+      msg.dest[0] = '\0';
+      chat_send_message(&msg);
+    } else if (publish_group[0] != '\0') {
+      msg.dest_type = DEST_GROUP;
+      name_cpy(msg.dest, publish_group);
+      chat_send_message(&msg);
+    }
 
     ztimer_sleep(ZTIMER_SEC, publish_preiod_s);
   }
@@ -167,4 +174,56 @@ void telemetry_print_lpp_cayenne(void) {
 
   sprint_lpp_cayenne(&t, sizeof(out), out);
   printf("LPP CAYENNE: %s\n", out);
+}
+
+int telemetry_cmd(int argc, char **argv) {
+  if (argc < 2) {
+    printf("Usage: %s [start|stop|print|print_lpp_cayenne|set]\n", argv[0]);
+    return 1;
+  }
+
+  if (strcmp(argv[1], "start") == 0) {
+    telemetry_start();
+  } else if (strcmp(argv[1], "stop") == 0) {
+    telemetry_stop();
+  } else if (strcmp(argv[1], "print") == 0) {
+    telemetry_print();
+  } else if (strcmp(argv[1], "print_lpp_cayenne") == 0) {
+    telemetry_print_lpp_cayenne();
+  } else if (strcmp(argv[1], "set") == 0) {
+    if (argc != 4) {
+      printf("Usage: %s set [period|broadcast|group] <value>\n", argv[0]);
+      return 2;
+    }
+
+    if (strcmp(argv[2], "broadcast") == 0) {
+      telemetry_set_broadcast(atoi(argv[3]) != 0);
+      telemetry_set_dest_group("\0\0\0\0");
+      printf("Telemetry broadcast set to %s\n",
+             atoi(argv[3]) != 0 ? "ON" : "OFF");
+      printf("Group destination cleared\n");
+    } else if (strcmp(argv[2], "group") == 0) {
+      if (strlen(argv[3]) >= 4) {
+        telemetry_set_broadcast(0);
+        telemetry_set_dest_group(argv[3]);
+        printf("Telemetry destination group set to '%s'\n", argv[3]);
+        printf("Broadcast disabled\n");
+      } else {
+        printf("Invalid group name. Must be at least 4 characters.\n");
+        return 3;
+      }
+    } else if (strcmp(argv[2], "period") == 0) {
+      telemetry_set_period(atoi(argv[3]));
+      printf("Telemetry publish period set to %s seconds\n", argv[3]);
+    } else {
+      printf("Invalid setting. Use 'period', 'broadcast', or 'group'.\n");
+      return 4;
+    }
+  } else {
+    printf("Usage: %s [start|stop|print|print_lpp_cayenne|set_period]\n",
+           argv[0]);
+    return 1;
+  }
+
+  return 0;
 }

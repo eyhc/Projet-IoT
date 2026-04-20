@@ -355,7 +355,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event) {
       break;
 
     default:
-      printf("Unexpected netdev event received: %d\n", event);
+      // printf("Unexpected netdev event received: %d\n", event);
       break;
     }
   }
@@ -375,7 +375,7 @@ void *_recv_thread(void *arg) {
       netdev_t *dev = msg.content.ptr;
       dev->driver->isr(dev);
     } else {
-      puts("Unexpected msg type");
+      // puts("Unexpected msg type");
     }
   }
 }

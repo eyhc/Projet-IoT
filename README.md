@@ -50,7 +50,8 @@ make -j 8 flash
 
 - [X] Ignorer les messages déjà reçus (via compteur de message expéditeur)
 - [ ] Réémettre un message (réseau maillé) si présence du ttl dans le message.
-
+- [ ] Configurer le seuil SNR pour la réémission d'un message (pour éviter les 
+      réémissions simultanées de noeuds proches l'un de l'autre).
 
 Politique de réémission : 
 
@@ -86,14 +87,18 @@ send_group   id    <id> <message> : Envoi d'un message sur un groupe de discussi
 force_rcv <message> : Simule la réception d'un message (pour les tests)
 force_rcv <message> <rssi> <snr> <toa> : Idem que précedent mais avec des 
                                         paramètres de réception personnalisés
-telemetry start <interval> : Démarrage de l'émission télémétrique à une fréquence 
-                            d'émission de interval secondes
+telemetry start : Démarrage de l'émission télémétrique
 telemetry stop : Arrêt de l'émission télémétrique
 telemetry print : Affichage des données de télémétrie actuelles
-telemetry print_lpp_cayenne : Affichage des données de télémétrie actuelles au format Cayenne LPP
-telemetry set_period <interval> : Modification de la période d'émission télémétrique à interval secondes
+telemetry print_lpp_cayenne : Affichage des données de télémétrie actuelles au 
+                              format Cayenne LPP
+telemetry set period <interval> : Modification de la période d'émission 
+                                  télémétrique à interval secondes
+telemetry set broadcast <0|1> : Activation ou désactivation de la diffusion de 
+                                la télémétrie à tous les utilisateurs.
+telemetry set group <group> : Configuration du groupe de discussion destinataire 
+                              de la télémétrie.
 ```
-
 
 ## Fichiers
 

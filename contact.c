@@ -20,7 +20,7 @@ void list_favorite_contacts(struct sync_chat_data *data) {
   for (size_t i = 0; i < MAX_CONTACTS; i++) {
     if (data->chat_data->chat_contacts[i].name[0] != '\0' &&
         data->chat_data->chat_contacts[i].is_favorite) {
-      printf("  Name=%.4s, last_seen_counter=%lu\n",
+      printf("  %u: Name:%.4s, last_seen_counter:%lu\n", i,
              data->chat_data->chat_contacts[i].name,
              data->chat_data->chat_contacts[i].last_seen_counter);
     }
