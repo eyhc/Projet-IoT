@@ -4,9 +4,8 @@
 #include "lora.h"
 #include <string.h>
 
-#define max(a, b) (((a) > (b)) ? (a) : (b))
-
 static char temp_buffer[MAX_MESSAGE_SIZE + 1];
+static char ttl_buffer[10];
 void sprint_message(size_t buffer_size, char buffer[buffer_size],
                     const struct message *msg) {
 
@@ -17,18 +16,25 @@ void sprint_message(size_t buffer_size, char buffer[buffer_size],
     temp_buffer[MAX_MESSAGE_SIZE] = '\0';
   }
 
+  if (msg->ttl == -1) {
+    ttl_buffer[0] = '\0';
+  } else {
+    snprintf(ttl_buffer, sizeof(ttl_buffer), ",%ld", msg->ttl);
+  }
+
   uint32_t ctr = msg->counter;
   switch (msg->dest_type) {
   case DEST_BROADCAST:
-    snprintf(buffer, buffer_size, "%.4s@*:%lu:%s", msg->sender, ctr, content);
+    snprintf(buffer, buffer_size, "%.4s@*:%lu%s:%s", msg->sender, ctr,
+             ttl_buffer, content);
     break;
   case DEST_CONTACT:
-    snprintf(buffer, buffer_size, "%.4s@%.4s:%lu:%s", msg->sender, msg->dest,
-             ctr, content);
+    snprintf(buffer, buffer_size, "%.4s@%.4s:%lu%s:%s", msg->sender, msg->dest,
+             ctr, ttl_buffer, content);
     break;
   case DEST_GROUP:
-    snprintf(buffer, buffer_size, "%.4s#%.4s:%lu:%s", msg->sender, msg->dest,
-             ctr, content);
+    snprintf(buffer, buffer_size, "%.4s#%.4s:%lu%s:%s", msg->sender, msg->dest,
+             ctr, ttl_buffer, content);
     break;
   }
 }
@@ -94,13 +100,31 @@ int parse_message(size_t size, char buffer[size], struct message *msg) {
 
   // COUNTER
   size_t j = 0;
-  for (; i < size && buffer[i] != ':'; j++, i++) {
+  for (;
+       j < sizeof(temp) - 1 && i < size && buffer[i] != ':' && buffer[i] != ',';
+       j++, i++) {
     temp[j] = buffer[i];
   }
   temp[j] = '\0';
   if (i >= size)
     return 5;
   msg->counter = atoll(temp);
+
+  // TTL (optional)
+  if (buffer[i] == ',') {
+    i++;
+    for (j = 0; j < sizeof(temp) - 1 && i < size && buffer[i] != ':';
+         j++, i++) {
+      temp[j] = buffer[i];
+    }
+    temp[j] = '\0';
+    int32_t ttl = atoi(temp);
+    if (ttl < 0 || ttl > 65535)
+      return 6;
+    msg->ttl = ttl;
+  } else {
+    msg->ttl = -1;
+  }
   i++;
 
   // CONTENT
@@ -137,54 +161,4 @@ int filter_message(const struct message *msg,
   mutex_unlock(data->mutex);
 
   return res;
-}
-
-void main_listen_message_entry(size_t len, char *message, int16_t rssi,
-                               int8_t snr, uint32_t toa) {
-
-  struct received_message rcv_msg;
-
-  if (parse_message(len, message, &rcv_msg.msg) != 0) {
-    return;
-  }
-
-  rcv_msg.rssi = rssi;
-  rcv_msg.snr = snr;
-  rcv_msg.toa = toa;
-
-  struct sync_chat_data *shared_data = get_shared_chat_data();
-  if (filter_message(&rcv_msg.msg, shared_data)) {
-    // add_message_to_my_history(&rcv_msg.msg, shared_data);
-
-    char to = (rcv_msg.msg.dest_type != DEST_GROUP) ? '@' : '#';
-    printf("[%.4s -> %c%.4s]: %s, RSSI=%i, SNR=%i, ToA=%lu\n",
-           rcv_msg.msg.sender, to, rcv_msg.msg.dest, rcv_msg.msg.content,
-           rcv_msg.rssi, rcv_msg.snr, rcv_msg.toa);
-  } else {
-    // add_message_to_other_dest_history(&rcv_msg.msg, shared_data);
-  }
-
-  // update last seen counter for this contact
-  mutex_lock(shared_data->mutex);
-  int idx = get_contact_index(shared_data->chat_data->chat_contacts,
-                              rcv_msg.msg.sender);
-  if (idx != -1) {
-    shared_data->chat_data->chat_contacts[idx].last_seen_counter =
-        max(shared_data->chat_data->chat_contacts[idx].last_seen_counter,
-            rcv_msg.msg.counter);
-  } else {
-    // contact inconnu, on l'ajoute à la liste des contacts
-    int empty_idx =
-        get_contact_empty_index(shared_data->chat_data->chat_contacts);
-    if (empty_idx != -1) {
-      name_cpy(shared_data->chat_data->chat_contacts[empty_idx].name,
-               rcv_msg.msg.sender);
-      shared_data->chat_data->chat_contacts[empty_idx].last_seen_counter =
-          rcv_msg.msg.counter;
-      shared_data->chat_data->chat_contacts[empty_idx].is_favorite = 0;
-    } else {
-      printf("Warning: no space to add new contact %.4s\n", rcv_msg.msg.sender);
-    }
-  }
-  mutex_unlock(shared_data->mutex);
 }

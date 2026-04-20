@@ -48,9 +48,11 @@ make -j 8 flash
 
 **LoraMeshChat**
 
-- [X] Ignorer les messages déjà reçus (via compteur de message expéditeur)
+- [X] Ignorer les messages déjà reçus (via compteur de message expéditeur).
+- [ ] Queue de messages en attente de réémission.
 - [ ] Réémettre un message (réseau maillé) si présence du ttl dans le message.
-- [ ] Configurer le seuil SNR pour la réémission d'un message (pour éviter les 
+- [X] Gestion du ttl dans les messages (sending & parsing).
+- [X] Configurer le seuil SNR pour la réémission d'un message (pour éviter les 
       réémissions simultanées de noeuds proches l'un de l'autre).
 
 Politique de réémission : 
@@ -98,6 +100,12 @@ telemetry set broadcast <0|1> : Activation ou désactivation de la diffusion de
                                 la télémétrie à tous les utilisateurs.
 telemetry set group <group> : Configuration du groupe de discussion destinataire 
                               de la télémétrie.
+mesh set snr_threshold <threshold> : Configuration du seuil de rapport signal sur
+                                     bruit pour la réémission d'un message (en dB)
+mesh set ttl <ttl> : Configuration du ttl maximum d'un message émis ou réémis.
+mesh print : Affichage de la queue de messages en attente de réémission.
+mesh enable : Activation du mode maillé (réémission des messages avec ttl)
+mesh disable : Désactivation du mode maillé.
 ```
 
 ## Fichiers

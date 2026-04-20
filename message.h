@@ -3,6 +3,8 @@
 
 #include "chat_data.h"
 
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+
 // Taille maximale du contenu d'un message (en caractères)
 #define MAX_MESSAGE_SIZE 128
 
@@ -15,6 +17,7 @@ struct message {
   char dest[NAME_SIZE];
   char content[MAX_MESSAGE_SIZE + 1];
   uint32_t counter;
+  int32_t ttl; // -1 pour réseau non maillé
 };
 
 // Message reçu, avec les métadonnées de réception (RSSI, SNR, ToA)
@@ -62,10 +65,5 @@ void add_message_to_other_dest_history(struct message *msg,
 // Affiche les derniers messages destinés à une autre destination (différente de
 // moi ou des groupes auxquels je suis inscrit)
 void print_other_dest_messages(size_t nb_msg);
-
-// Fonction d'entrée du thread d'écoute des messages LoRa
-// Et effectue les bons traitements
-void main_listen_message_entry(size_t len, char *message, int16_t rssi,
-                               int8_t snr, uint32_t toa);
 
 #endif /* MESSAGE_SENDER_H */

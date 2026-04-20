@@ -2,8 +2,11 @@
 #include "chat.h"
 #include "eeprom.h"
 #include "lora.h"
+#include "mesh.h"
 #include "shell.h"
 #include "telemetry.h"
+#include <stdio.h>
+#include <string.h>
 
 #define SAVE_PERIOD_SEC (600U)
 
@@ -91,8 +94,31 @@ int rx_msg_cmd(int argc, char **argv) {
   int8_t snr = (argc == 5) ? atoi(argv[3]) : 0;
   uint32_t toa = (argc == 5) ? atoi(argv[4]) : 0;
 
-  main_listen_message_entry(len, argv[1], rssi, snr, toa);
+  chat_listen_message(len, argv[1], rssi, snr, toa);
   return 0;
+}
+
+int mesh_cmd(int argc, char **argv) {
+  if (argc < 2 ||
+      (strcmp(argv[1], "set") != 0 && strcmp(argv[1], "print") != 0 &&
+       strcmp(argv[1], "enable") != 0 && strcmp(argv[1], "disable") != 0)) {
+    printf("Usage: %s [set|print|enable|disable]\n", argv[0]);
+    return 1;
+  }
+
+  if (strcmp(argv[1], "set") == 0) {
+    return mesh_set_cmd(argc, argv);
+  } else if (strcmp(argv[1], "enable") == 0) {
+    mesh_enable(1);
+    printf("Mesh enabled\n");
+    return 0;
+  } else if (strcmp(argv[1], "disable") == 0) {
+    mesh_enable(0);
+    printf("Mesh disabled\n");
+    return 0;
+  } else {
+    return mesh_print_queue(argc, argv);
+  }
 }
 
 static const shell_command_t shell_commands[] = {
@@ -112,11 +138,13 @@ static const shell_command_t shell_commands[] = {
     {"send_group", "Send a message to a group", chat_send_to_group_cmd},
     {"force_rcv", "Simulate the reception of a msg (for testing)", rx_msg_cmd},
     {"telemetry", "Manage telemetry", telemetry_cmd},
+    {"mesh", "Manage mesh settings", mesh_cmd},
     {NULL, NULL, NULL}};
 
 int main(void) {
   /* initialisation du chat (+ lora + eeprom) */
   chat_init(SAVE_PERIOD_SEC);
+  mesh_init();
   telemetry_init();
 
   /* start the shell */

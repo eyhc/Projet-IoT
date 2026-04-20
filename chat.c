@@ -4,6 +4,7 @@
 #include "eeprom.h"
 #include "group.h"
 #include "lora.h"
+#include "mesh.h"
 #include "message.h"
 #include "thread.h"
 #include "ztimer.h"
@@ -112,7 +113,7 @@ void chat_init(uint32_t period_s) {
   lora_implicit(3, (char *[]){"lora_implicit", "set", implicit_header_str});
   lora_syncword(3, (char *[]){"lora_syncword", "set", syncword_str});
 
-  lora_set_message_callback((lora_message_callback_t)main_listen_message_entry);
+  lora_set_message_callback((lora_message_callback_t)chat_listen_message);
   lora_listen(0, NULL);
 }
 
@@ -309,6 +310,13 @@ int chat_contact(int argc, char *argv[argc]) {
 /* ====================== ENVOIE DE MESSAGES ====================== */
 
 int chat_send_message(struct message *msg) {
+  if (mesh_is_enabled()) {
+    // TODO: add to mesh queue
+    msg->ttl = mesh_get_ttl();
+  } else {
+    msg->ttl = -1;
+  }
+
   static char buffer[MAX_MESSAGE_SIZE + 20];
   sprint_message(sizeof(buffer), buffer, msg);
   return lora_send(2, (char *[]){"lora_send", buffer});
@@ -437,4 +445,59 @@ int chat_send_to_group_cmd(int argc, char *argv[argc]) {
   msg.content[MAX_MESSAGE_SIZE] = '\0';
 
   return chat_send_message(&msg);
+}
+
+/* ====================== RECEPTION DE MESSAGES ====================== */
+
+void chat_listen_message(size_t len, char *message, int16_t rssi, int8_t snr,
+                         uint32_t toa) {
+
+  struct received_message rcv_msg;
+
+  if (parse_message(len, message, &rcv_msg.msg) != 0) {
+    return;
+  }
+
+  rcv_msg.rssi = rssi;
+  rcv_msg.snr = snr;
+  rcv_msg.toa = toa;
+
+  struct sync_chat_data *shared_data = get_shared_chat_data();
+  if (filter_message(&rcv_msg.msg, shared_data)) {
+    // add_message_to_my_history(&rcv_msg.msg, shared_data);
+
+    char to = (rcv_msg.msg.dest_type != DEST_GROUP) ? '@' : '#';
+    printf("[%.4s -> %c%.4s]: %s, RSSI=%i, SNR=%i, ToA=%lu\n",
+           rcv_msg.msg.sender, to, rcv_msg.msg.dest, rcv_msg.msg.content,
+           rcv_msg.rssi, rcv_msg.snr, rcv_msg.toa);
+  } else {
+    // add_message_to_other_dest_history(&rcv_msg.msg, shared_data);
+  }
+
+  // update last seen counter for this contact
+  mutex_lock(shared_data->mutex);
+  int idx = get_contact_index(shared_data->chat_data->chat_contacts,
+                              rcv_msg.msg.sender);
+  if (idx != -1) {
+    shared_data->chat_data->chat_contacts[idx].last_seen_counter =
+        max(shared_data->chat_data->chat_contacts[idx].last_seen_counter,
+            rcv_msg.msg.counter);
+  } else {
+    // contact inconnu, on l'ajoute à la liste des contacts
+    int empty_idx =
+        get_contact_empty_index(shared_data->chat_data->chat_contacts);
+    if (empty_idx != -1) {
+      name_cpy(shared_data->chat_data->chat_contacts[empty_idx].name,
+               rcv_msg.msg.sender);
+      shared_data->chat_data->chat_contacts[empty_idx].last_seen_counter =
+          rcv_msg.msg.counter;
+      shared_data->chat_data->chat_contacts[empty_idx].is_favorite = 0;
+    } else {
+      printf("Warning: no space to add new contact %.4s\n", rcv_msg.msg.sender);
+    }
+  }
+  mutex_unlock(shared_data->mutex);
+
+  // MESH TRAITEMENT
+  // TODO: add to mesh queue if mesh is enabled and ttl > 0
 }

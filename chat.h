@@ -69,4 +69,11 @@ int chat_send_to_contact_cmd(int argc, char *argv[argc]);
 //     discussion)
 int chat_send_to_group_cmd(int argc, char *argv[argc]);
 
+/* ---- RECEPTION DE MESSAGES ---- */
+
+// Fonction d'entrée du thread d'écoute des messages LoRa
+// Et effectue les bons traitements
+void chat_listen_message(size_t len, char *message, int16_t rssi, int8_t snr,
+                         uint32_t toa);
+
 #endif /* CHAT_H */
