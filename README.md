@@ -119,3 +119,4 @@ mesh disable : Désactivation du mode maillé.
 - `group.c` : implémentation des fonctions de gestion des groupes de discussion.
 - `contact.c` : implémentation des fonctions de gestion des contacts.
 - `telemetry.c` : implémentation de l'émission télémétrique périodique.
+- `mesh.c` : implémentation de la logique de réseau maillé (réémission des messages avec ttl).
