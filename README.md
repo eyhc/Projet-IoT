@@ -49,7 +49,7 @@ make -j 8 flash
 **LoraMeshChat**
 
 - [X] Ignorer les messages déjà reçus (via compteur de message expéditeur).
-- [ ] Queue de messages en attente de réémission.
+- [X] Queue de messages en attente de réémission.
 - [ ] Réémettre un message (réseau maillé) si présence du ttl dans le message.
 - [X] Gestion du ttl dans les messages (sending & parsing).
 - [X] Configurer le seuil SNR pour la réémission d'un message (pour éviter les 

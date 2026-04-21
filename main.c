@@ -90,9 +90,12 @@ int rx_msg_cmd(int argc, char **argv) {
     return -1;
   }
 
-  uint8_t rssi = (argc == 5) ? atoi(argv[2]) : 0;
-  int8_t snr = (argc == 5) ? atoi(argv[3]) : 0;
-  uint32_t toa = (argc == 5) ? atoi(argv[4]) : 0;
+  uint8_t rssi = (argc == 5) ? (uint8_t)atoi(argv[2]) : 0;
+  int8_t snr = (argc == 5) ? (int8_t)atoi(argv[3]) : 0;
+  uint32_t toa = (argc == 5) ? (uint32_t)atoi(argv[4]) : 0;
+
+  printf("Simulating reception of message '%s' with RSSI=%d, SNR=%d, ToA=%lu\n",
+         argv[1], rssi, snr, toa);
 
   chat_listen_message(len, argv[1], rssi, snr, toa);
   return 0;

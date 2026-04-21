@@ -309,9 +309,14 @@ int chat_contact(int argc, char *argv[argc]) {
 
 /* ====================== ENVOIE DE MESSAGES ====================== */
 
+static struct received_message temp_msg;
 int chat_send_message(struct message *msg) {
   if (mesh_is_enabled()) {
-    // TODO: add to mesh queue
+    temp_msg.msg = *msg;
+    temp_msg.rssi = 0;
+    temp_msg.snr = 0;
+    temp_msg.toa = 0;
+    mesh_handle_message(&temp_msg);
     msg->ttl = mesh_get_ttl();
   } else {
     msg->ttl = -1;
@@ -499,5 +504,5 @@ void chat_listen_message(size_t len, char *message, int16_t rssi, int8_t snr,
   mutex_unlock(shared_data->mutex);
 
   // MESH TRAITEMENT
-  // TODO: add to mesh queue if mesh is enabled and ttl > 0
+  mesh_handle_message(&rcv_msg);
 }
