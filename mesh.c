@@ -3,10 +3,12 @@
 #include "architecture.h"
 #include "lora.h"
 #include "mutex.h"
+#include "ztimer.h"
 #include <stdio.h>
 #include <string.h>
 
 /* ------------------------------------------------------------------------- */
+// FIFO DES MESSAGES (queue circulaire)
 
 #define MESH_QUEUE_SIZE 10
 
@@ -15,6 +17,7 @@ enum status { RELAYED, NOT_RELAYED };
 struct queue_entry {
   struct received_message msg;
   uint32_t relay_time;
+  uint32_t relay_remaining_time;
   enum status relay_status;
 };
 
@@ -54,6 +57,7 @@ int queue_dequeue(struct queue_entry *entry) {
 }
 
 /* -------------------------------------------------------------- */
+// MODIFICATION DES PARAMETRES DU RESEAU MESH
 
 static int8_t snr_threshold;
 static uint16_t max_ttl;
@@ -88,10 +92,11 @@ int mesh_set_cmd(int argc, char **argv) {
 }
 
 /* ------------------------------------------------------------------------- */
+// Calcul du délai de relais d'un message en fonction de son ToA et de son SNR
 
 #define MIN_RELAY_DELAY 1000  // ms
 #define MAX_RELAY_DELAY 10000 // ms
-#define RANDOM_JITTER 1000    // ms
+#define RANDOM_JITTER 2000    // ms
 
 static uint32_t relayDelay(uint32_t ToA, int16_t snr) {
 
@@ -99,7 +104,7 @@ static uint32_t relayDelay(uint32_t ToA, int16_t snr) {
 
   float snr_factor = 0.0f;
   if (snr < snr_threshold)
-    snr_factor = (snr_threshold - snr) * 200.0f;
+    snr_factor = (snr_threshold - snr) * 500.0f;
 
   uint32_t jitter = lora_random() % RANDOM_JITTER;
   uint32_t delay = (uint32_t)(snr_factor) + ToA + jitter;
@@ -110,8 +115,8 @@ static uint32_t relayDelay(uint32_t ToA, int16_t snr) {
 }
 
 /* -------------------------------------------------------------------------- */
-
-mutex_t mesh_queue_mutex = MUTEX_INIT;
+// Ajoute les message reçus / émis à la queue de relais s'ils passent les
+// conditions
 
 void mesh_handle_message(struct received_message *msg) {
   if (!mesh_is_enabled())
@@ -124,27 +129,28 @@ void mesh_handle_message(struct received_message *msg) {
   }
 
   if (msg->msg.ttl <= 0) {
-    printf("Message TTL expired, not relaying.\n");
     return;
   }
 
   uint32_t delay = relayDelay(msg->toa, msg->snr);
-  struct queue_entry entry = {
-      .msg = *msg, .relay_time = delay, .relay_status = NOT_RELAYED};
+  msg->msg.ttl--;
+  struct queue_entry entry = {.msg = *msg,
+                              .relay_time = delay,
+                              .relay_remaining_time = delay,
+                              .relay_status = NOT_RELAYED};
 
   // check if message is already in the queue (to avoid duplicates)
-  mutex_lock(&mesh_queue_mutex);
   size_t i;
   for (i = tail; i != head; i = (i + 1) % MESH_QUEUE_SIZE) {
     struct queue_entry *e = &mesh_queue[i];
     if (e->msg.msg.counter == msg->msg.counter)
       break;
   }
-  mutex_unlock(&mesh_queue_mutex);
 
   if (i == head) {
     if (is_queue_full()) {
-      printf("Mesh relay queue full, cannot dequeue first entry.\n");
+      if (mesh_queue[head].relay_status == NOT_RELAYED)
+        printf("Mesh relay queue full, cannot dequeue first entry.\n");
       queue_dequeue(NULL);
       return;
     }
@@ -152,6 +158,7 @@ void mesh_handle_message(struct received_message *msg) {
   }
 }
 
+// Commande shell pour afficher la queue de relais (pour debug)
 int mesh_print_queue(int argc, char **argv) {
   (void)argc;
   (void)argv;
@@ -160,29 +167,85 @@ int mesh_print_queue(int argc, char **argv) {
   for (size_t i = tail; i != head; i = (i + 1) % MESH_QUEUE_SIZE) {
     struct queue_entry *entry = &mesh_queue[i];
     printf("  [%u] Sender: %.4s, Dest: %.4s, Content: %s, TTL: %li, Relay "
-           "Delay: %lu ms, status: %s\n",
+           "Delay: %lu ms, remaining delay: %lu ms, status: %s\n",
            i, entry->msg.msg.sender, entry->msg.msg.dest,
            entry->msg.msg.content, entry->msg.msg.ttl, entry->relay_time,
+           entry->relay_remaining_time,
            entry->relay_status == RELAYED ? "RELAYED" : "NOT_RELAYED");
   }
   return 0;
 }
 
 /* -------------------------------------------------------------------------- */
+// THREAD DE RELAIS QUI RELAYE LES MESSAGES DE LA QUEUE QUAND LEUR DELAI EST
+// ECHECUE
 
 static int mesh_enabled = 0;
 
-void mesh_enable(int enable) { mesh_enabled = enable; }
-int mesh_is_enabled(void) { return mesh_enabled; }
-
-/*
 #define MESH_THREAD_STACK_SIZE 1024
 static kernel_pid_t _mesh_pid;
 static char stack[MESH_THREAD_STACK_SIZE];
-void _mesh_task(void *arg) {
+void *_mesh_task(void *arg) {
   (void)arg;
 
+  puts("Mesh thread started.\n");
+
+  static uint32_t wait_time = 0;
   while (1) {
+    if (!mesh_enabled) {
+      puts("Mesh thread stopped.\n");
+      return NULL;
+    }
+
+    // Relayer tous les messages qui ont atteint leur délai de relais
+    size_t t = 0;
+    for (size_t i = tail; i != head; i = (i + 1) % MESH_QUEUE_SIZE) {
+      struct queue_entry *entry = &mesh_queue[i];
+      entry->relay_remaining_time =
+          (entry->relay_remaining_time > wait_time)
+              ? entry->relay_remaining_time - wait_time
+              : 0;
+      if (entry->relay_status == NOT_RELAYED) {
+        if (entry->relay_remaining_time <= 0) {
+          printf("relay message: ");
+          static char buffer[MAX_MESSAGE_SIZE + 20];
+          sprint_message(sizeof(buffer), buffer, &entry->msg.msg);
+          lora_send(2, (char *[]){"lora_send", buffer});
+          entry->relay_status = RELAYED;
+          t++;
+          ztimer_sleep(ZTIMER_MSEC, 500); // small delay between relays
+        }
+      }
+    }
+
+    // chercher le delay_min pour le prochain message à relayer
+    wait_time = 1000;
+    for (size_t i = tail; i != head; i = (i + 1) % MESH_QUEUE_SIZE) {
+      struct queue_entry *entry = &mesh_queue[i];
+      entry->relay_remaining_time = (entry->relay_remaining_time > t * 500)
+                                        ? entry->relay_remaining_time - t * 500
+                                        : 0;
+      if (entry->relay_status == NOT_RELAYED) {
+        if (wait_time == 0 || entry->relay_remaining_time < wait_time)
+          wait_time = entry->relay_remaining_time;
+      }
+    }
+
+    ztimer_sleep(ZTIMER_MSEC, wait_time);
   }
 }
-*/
+
+void mesh_enable(int enable) {
+  if (enable && !mesh_enabled) {
+    mesh_enabled = 1;
+    _mesh_pid =
+        thread_create(stack, sizeof(stack), THREAD_PRIORITY_MAIN - 1,
+                      THREAD_CREATE_STACKTEST, _mesh_task, NULL, "mesh_thread");
+    if (_mesh_pid <= KERNEL_PID_UNDEF) {
+      puts("Creation of mesh thread failed");
+    }
+  }
+  mesh_enabled = enable;
+}
+
+int mesh_is_enabled(void) { return mesh_enabled; }

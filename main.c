@@ -113,11 +113,9 @@ int mesh_cmd(int argc, char **argv) {
     return mesh_set_cmd(argc, argv);
   } else if (strcmp(argv[1], "enable") == 0) {
     mesh_enable(1);
-    printf("Mesh enabled\n");
     return 0;
   } else if (strcmp(argv[1], "disable") == 0) {
     mesh_enable(0);
-    printf("Mesh disabled\n");
     return 0;
   } else {
     return mesh_print_queue(argc, argv);

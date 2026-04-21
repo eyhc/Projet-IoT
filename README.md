@@ -50,7 +50,7 @@ make -j 8 flash
 
 - [X] Ignorer les messages déjà reçus (via compteur de message expéditeur).
 - [X] Queue de messages en attente de réémission.
-- [ ] Réémettre un message (réseau maillé) si présence du ttl dans le message.
+- [X] Réémettre un message (réseau maillé) si présence du ttl dans le message.
 - [X] Gestion du ttl dans les messages (sending & parsing).
 - [X] Configurer le seuil SNR pour la réémission d'un message (pour éviter les 
       réémissions simultanées de noeuds proches l'un de l'autre).
