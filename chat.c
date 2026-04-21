@@ -316,6 +316,8 @@ int chat_send_message(struct message *msg) {
     temp_msg.rssi = 0;
     temp_msg.snr = 0;
     temp_msg.toa = 0;
+
+    temp_msg.msg.ttl = mesh_get_ttl();
     mesh_handle_message(&temp_msg);
     msg->ttl = mesh_get_ttl();
   } else {
