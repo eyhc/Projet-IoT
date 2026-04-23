@@ -123,6 +123,7 @@ int mesh_cmd(int argc, char **argv) {
 }
 
 static const shell_command_t shell_commands[] = {
+    {"lora_listen", "Start listening for LoRa messages", lora_listen},
     {"lora_setup", "Initialize LoRa modulation settings", lora_setup_cmd},
     {"lora_implicit", "Enable implicit header", lora_implicit_cmd},
     {"lora_crc", "Enable CRC", lora_crc_cmd},

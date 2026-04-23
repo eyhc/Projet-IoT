@@ -171,8 +171,7 @@ int lora_listen(int argc, char **argv) {
 
   netdev->driver->set(netdev, NETOPT_STATE, &state, sizeof(state));
 
-  printf("Listen mode set\n");
-
+  // printf("Listen mode set\n");
   return 0;
 }
 
@@ -336,6 +335,10 @@ static void _event_cb(netdev_t *dev, netdev_event_t event) {
       len = dev->driver->recv(dev, NULL, 0, 0);
       dev->driver->recv(dev, message, len, &packet_info);
 
+      /*printf("Receive data (not filtered): '%s' (len: %u, RSSI: %d, SNR: %d, "
+             "ToA: %lu)\n",
+             message, (unsigned)len, packet_info.rssi, packet_info.snr,
+             sx127x_get_time_on_air((const sx127x_t *)dev, len));*/
       if (_message_callback) {
         _message_callback(len, message, packet_info.rssi, packet_info.snr,
                           sx127x_get_time_on_air((const sx127x_t *)dev, len));
@@ -343,6 +346,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event) {
       break;
 
     case NETDEV_EVENT_TX_COMPLETE:
+      lora_listen(0, NULL);
       sx127x_set_sleep(&sx127x);
       // puts("Transmission completed");
       break;
@@ -351,6 +355,7 @@ static void _event_cb(netdev_t *dev, netdev_event_t event) {
       break;
 
     case NETDEV_EVENT_TX_TIMEOUT:
+      lora_listen(0, NULL);
       sx127x_set_sleep(&sx127x);
       break;
 

@@ -318,7 +318,7 @@ int chat_send_message(struct message *msg) {
     temp_msg.toa = 0;
 
     temp_msg.msg.ttl = mesh_get_ttl();
-    mesh_handle_message(&temp_msg);
+    // mesh_handle_message(&temp_msg);
     msg->ttl = mesh_get_ttl();
   } else {
     msg->ttl = -1;
@@ -464,6 +464,12 @@ void chat_listen_message(size_t len, char *message, int16_t rssi, int8_t snr,
   if (parse_message(len, message, &rcv_msg.msg) != 0) {
     return;
   }
+  mutex_lock(shared_data.mutex);
+  if (name_cmp(rcv_msg.msg.sender, shared_data.chat_data->local_user.name)) {
+    mutex_unlock(shared_data.mutex);
+    return;
+  }
+  mutex_unlock(shared_data.mutex);
 
   rcv_msg.rssi = rssi;
   rcv_msg.snr = snr;
